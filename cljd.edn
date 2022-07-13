@@ -1,0 +1,1 @@
+{:main cloap.core, :bin "flutter"}

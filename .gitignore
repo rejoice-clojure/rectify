@@ -1,0 +1,47 @@
+# clojure related
+lib 
+.clojuredart 
+.cpcache
+.calva 
+
+# flutter and dart related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+
+# intelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+
+# misc
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# symbolication related
+app.*.symbols
+
+# obfuscation related
+app.*.map.json
+
+# android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

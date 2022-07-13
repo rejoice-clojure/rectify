@@ -1,0 +1,7 @@
+{:cljd/opts {:kind :flutter
+             :main cloap.core}
+ :paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.10.1"}
+        tensegritics/clojuredart
+        {:git/url "git@github.com:tensegritics/ClojureDart.git"
+         :sha "3b16e0f598485d3eac9812f3a01858c46f19596a"}}}
