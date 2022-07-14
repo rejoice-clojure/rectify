@@ -1,4 +1,4 @@
-(ns cloap.core.sexp
+(ns rectify.core.sexp
   "Transform s-expression output.
    NOTE: This code was forked from: weavejester/hiccup -> r0man/sablono -> rauhs/hicada.")
 

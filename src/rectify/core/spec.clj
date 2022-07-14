@@ -1,4 +1,4 @@
-(ns cloap.core.spec
+(ns rectify.core.spec
   (:require [clojure.spec.alpha :as s]))
 
 (defn conform

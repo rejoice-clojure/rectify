@@ -1,6 +1,5 @@
-(ns cloap.core.hiccup
-  (:require [clojure.spec.alpha :as s]
-            [cloap.core.spec :as spec])
+(ns rectify.core.hiccup
+  (:require [rectify.core.spec :as spec])
   (:refer-clojure :exclude [compile]))
 
 (defn- maybe-hiccup?
@@ -111,7 +110,7 @@
     (let [parsers (spec/conform parsers :cloap/parsers)
           normalized-args (normalize (spec/conform body :cloap/hiccup))
           parsers  (into parsers (create-default-parsers #(compile % opts)))
-          args (run-args-parsers normalized-args parsers)]      
+          args (run-args-parsers normalized-args parsers)]
       (cond
         ;; => Emit args.
         ;; Any vector args returned from parser will be normalized, so we apply them to emitter diretly.
@@ -127,9 +126,7 @@
     ;; (list? body)
     ;; (sexp/transform-children body #(compile % opts))
 
-    :else body
-    )
-    )
+    :else body))
 
 (comment
   (defn emitter [tag props] `(emit ~tag ~props))
@@ -147,9 +144,7 @@
 
  ;; nested child
   (compile [:a {:b "c"} [:d]] opts)
-  
+
   (let [opts {:emitter emitter
               :parsers [[:a (fn [_ _] `(A))]]}]
-    (compile [:a] opts))
-  
-  )
+    (compile [:a] opts)))

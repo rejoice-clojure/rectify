@@ -1,7 +1,7 @@
-(ns cloap.core.component-fn
+(ns rectify.core.component
   (:require
-   [cloap.core.spec :as spec]
-   [cloap.core.hiccup :as hiccup]))
+   [rectify.core.spec :as spec]
+   [rectify.core.hiccup :as hiccup]))
 
 (defn widget-fn*
   "Generate widget as a fn expr."
@@ -13,18 +13,20 @@
     ;; todo may have to gensym params
     `(fn ~name ~params
        ~@(when (seq evals) evals)
-       ~(hiccup/compile (last hiccups) compile-opts))))
+      ;;  note: splicing to remove nils if only eval exprs were declared; as last eval should be returned child.
+       ~@(when (seq hiccups) [(hiccup/compile (last hiccups) compile-opts)]))))
 
 (defn generate* [decls compile-opts]
-  (let [{:keys [name docstr] :as component-map} (spec/conform decls :cloap/component)]
+  (let [{:keys [name docstr] :as component-map} (spec/conform decls :rec/component)]
     `(def ~@(if docstr [name docstr] [name])
        ~(widget-fn* component-map compile-opts))))
 
 (comment
-  (defn emitter [tag props] `(~tag ~props))
+  (defn emitter [tag props]
+    `(~tag ~props))
 
   (def opts {:parsers [[keyword? {:tag #(-> % name symbol)}]]
-             :emitter `emitter})
+             :emitter emitter})
 
   ;; string
   (generate* '(name [] "string") opts)
@@ -32,6 +34,10 @@
   ;; tag + child
   (generate* '(name [] [:a "b"]) opts)
 
+  ;;  without any hiccup, last eval expr acts as child
+  (generate* '(name [] (component)) opts)
+
   ;; extra child prints warning
-  (generate* '(name [] [:a "b"] [:a "b"]) opts))
+  (generate* '(name [] [:a "b"] [:a "b"]) opts)
+  )
 

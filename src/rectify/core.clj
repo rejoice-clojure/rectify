@@ -1,7 +1,7 @@
-(ns cloap.core.component
+(ns rectify.core
   (:require
-   [cloap.core.component-fn :as co-fn]
-   [cloap.core.hiccup :as hic]))
+   [rectify.core.component :as co]
+   [rectify.core.hiccup :as hic]))
 
 
 (def ^:dynamic *component-context* nil)
@@ -23,8 +23,7 @@
 (defn component [decls]
   (with-bound-component
     (fn [{:keys [compile-opts]}]
-      (co-fn/generate* decls compile-opts))))
-
+      (co/generate* decls compile-opts))))
 
 ;;  == Component factory
 ;; Each component binds its own context to delegate nested compilation.
