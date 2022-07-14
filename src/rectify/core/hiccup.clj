@@ -9,13 +9,13 @@
 ;;  == Argument Parser
 
 (defn seq-parse
-  "Parse normalized `args` using `parsers`. 
+  "Parse normalized args using `parsers`. 
    Matched parsers are ran sequentially, each passing its output to the next one.
 
-   Parsers are {check parser} pairs. 
-   A check is a predicate fn or keyword to that declares the match.
+   Parsers are {clause parser} pairs. 
+   A clause is a predicate fn or keyword to that declares the match.
    A parser is a fn (fn [...args]) or map applied according to `apply-parser-map`."
-  [initial {:keys [parsers
+  [nargs {:keys [parsers
                    check-clause
                    apply-parser
                    terminate-early?]
@@ -28,7 +28,7 @@
                   (reduced parsed-args)
                   parsed-args))
               acc))
-          initial
+          nargs
           parsers))
 
 (defn- check-props-clause [clause-key props]
