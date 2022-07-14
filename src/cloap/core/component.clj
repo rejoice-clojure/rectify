@@ -1,27 +1,40 @@
 (ns cloap.core.component
-  (:require [cloap.core.spec :as spec]
-            [cloap.core.hiccup :as hiccup]))
+  (:require
+   [cloap.core.component-fn :as co-fn]
+   [cloap.core.hiccup :as hic]))
 
-(defn generate* [input compile-opts]
-  (let [{:keys [name params opts body]} (spec/conform input ::spec/component)
-        {:keys [evals hiccups]} body]
-    (when (> (count hiccups) 1)
-      (println "(Warning) Extra hiccup expressions in component" (str "'" name "'") "are ignored."))
 
-    `(fn ~name ~params
-       ~@(when (seq evals) evals)
-       ~(hiccup/compile (last hiccups) compile-opts))))
+(def ^:dynamic *component-context* nil)
 
-(comment
-  (defn emitter [tag props] `(~tag ~props))
-  (def opts {:parsers [[keyword? {:tag #(-> % name symbol)}]]
-             :emitter emitter})
+(defn with-bound-component [f]
+  (if-let [ctx *component-context*]
+    (f ctx)
+    (throw (Exception. "Component context not bound."))))
 
-  ;; tag + child
-  (generate* '(name [] [:a "b"]) opts)
 
-  ;; extra child prints warning
-  (generate* '(name [] [:a "b"] [:a "b"]) opts)
-  )
+;; == Stateful fns 
+;; These fns use the component context directly.
 
+(defn hiccup [expr]
+  (with-bound-component
+    (fn [{:keys [compile-opts]}]
+      (hic/compile expr compile-opts))))
+
+(defn component [decls]
+  (with-bound-component
+    (fn [{:keys [compile-opts]}]
+      (co-fn/generate* decls compile-opts))))
+
+
+;;  == Component factory
+;; Each component binds its own context to delegate nested compilation.
+;; Note: we use `with-bindings` rather than `binding` since the former is a fn run at macroexpand time.
+
+(defn define-component [decls opts]
+  (let [name (first decls)
+        comp-id (str *ns* "/" name)]
+    (with-bindings*
+      {(var *component-context*) {:comp-id comp-id
+                                  :compile-opts opts}}
+      #(component decls))))
 

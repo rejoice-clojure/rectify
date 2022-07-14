@@ -1,0 +1,4 @@
+(ns cloap.flutter.component-shim)
+
+(defn define-component [_]
+  nil)

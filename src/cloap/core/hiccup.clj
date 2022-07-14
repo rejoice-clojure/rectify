@@ -108,18 +108,18 @@
   (cond
      ;; => Hiccup
     (vector? body)
-    (let [parsers (spec/conform parsers ::spec/parsers)
-          normalized-args (normalize (spec/conform body ::spec/hiccup))
+    (let [parsers (spec/conform parsers :cloap/parsers)
+          normalized-args (normalize (spec/conform body :cloap/hiccup))
           parsers  (into parsers (create-default-parsers #(compile % opts)))
-          args (run-args-parsers normalized-args parsers)
-          [t p]  args]
+          args (run-args-parsers normalized-args parsers)]      
       (cond
         ;; => Emit args.
-        (vector? args) (emitter t p)
+        ;; Any vector args returned from parser will be normalized, so we apply them to emitter diretly.
+        (vector? args) (apply emitter args)
 
         ;; => Call expr. 
         ;; Parsers can directly return self-callable exprs.
-        (sequential? args) `(~t ~p)
+        (sequential? args) args
 
         :else (throw (ex-info "Invalid component argument." {:args args}))))
 
@@ -127,7 +127,9 @@
     ;; (list? body)
     ;; (sexp/transform-children body #(compile % opts))
 
-    :else body))
+    :else body
+    )
+    )
 
 (comment
   (defn emitter [tag props] `(emit ~tag ~props))
@@ -144,4 +146,10 @@
   (compile [:a {:b "c"} "d" "e"] opts)
 
  ;; nested child
-  (compile [:a {:b "c"} [:d]] opts))
+  (compile [:a {:b "c"} [:d]] opts)
+  
+  (let [opts {:emitter emitter
+              :parsers [[:a (fn [_ _] `(A))]]}]
+    (compile [:a] opts))
+  
+  )

@@ -10,7 +10,7 @@
 
 ;; == Parsers
 
-(s/def ::parsers
+(s/def :cloap/parsers
   (s/coll-of
    (s/tuple
     some?
@@ -35,7 +35,7 @@
 
 ;; == Hiccup
 
-(s/def ::hiccup
+(s/def :cloap/hiccup
   (s/cat
    :tag   #(or (keyword? %) (symbol? %))
    :props (s/? (s/map-of keyword? any?))
@@ -55,7 +55,7 @@
 
 ;;  == Component
 
-(s/def ::component
+(s/def :cloap/component
   (s/cat
    :name   symbol?
    :docstr (s/? string?)
@@ -66,7 +66,6 @@
                 ;; Only one child should be returned but we match for many to throw more precise error elsewhere.
                 :hiccups (s/* vector?)))
    :catch (s/* nil?)))
-
 
 (comment
   ;;  name + param
