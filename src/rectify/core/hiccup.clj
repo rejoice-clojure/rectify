@@ -55,12 +55,13 @@
                               :check-clause check-props-clause
                               :apply-parser apply-props-parser}))
           (apply-parser-map
-            [[tag props] parser]
+            [[tag props slots] parser]
             [(fn-or-x (:tag parser) tag)
              (when props
                (if (map? props)
                  (run-props-parsers props (:props parser))
-                 (fn-or-x (:props parser) props)))])]
+                 (fn-or-x (:props parser) props)))
+             (fn-or-x (:slots parser) slots)])]
     (if (fn? parser)
       (apply parser args)
       (apply-parser-map args parser))))
@@ -88,17 +89,9 @@
 
 (declare compile)
 
-(defn- normalize [{:keys [tag props slot-prop]}]
+(defn- normalize [{:keys [tag props slots]}]
   [tag]
-  (if-let [[k v] slot-prop]
-    (if-not (= v :clojure.spec.alpha/nil)
-      [tag (assoc props k v)]
-      [tag props])
-    [tag props]))
-
-(defn create-default-parsers [compile-fn]
-  [[any? {:props {:child compile-fn
-                  :children #(mapv compile-fn %)}}]])
+  [tag props (or slots [])])
 
 (defn compile
   [body {:keys [emitter parsers]
@@ -107,14 +100,14 @@
   (cond
      ;; => Hiccup
     (vector? body)
-    (let [parsers (spec/conform parsers :cloap/parsers)
-          normalized-args (normalize (spec/conform body :cloap/hiccup))
-          parsers  (into parsers (create-default-parsers #(compile % opts)))
+    (let [parsers (spec/conform parsers :rec/parsers)
+          normalized-args (normalize (spec/conform body :rec/hiccup))
+          compile-rest #(compile % opts)
           args (run-args-parsers normalized-args parsers)]
       (cond
         ;; => Emit args.
         ;; Any vector args returned from parser will be normalized, so we apply them to emitter diretly.
-        (vector? args) (apply emitter args)
+        (vector? args) (let [[tag props slots] args] (emitter tag props (mapv compile-rest slots)))
 
         ;; => Call expr. 
         ;; Parsers can directly return self-callable exprs.
@@ -129,7 +122,10 @@
     :else body))
 
 (comment
-  (defn emitter [tag props] `(emit ~tag ~props))
+  ;; Testing compile options below 
+  ;; for testing how Hiccup arguments are conformed, see spec.
+
+  (defn emitter [tag props slots] `(emit ~tag ~props ~@slots))
   (def opts {:emitter emitter
              :parsers [[any? {:tag #(-> % name symbol)}]]})
 
@@ -142,9 +138,9 @@
   ;; tag + props + children
   (compile [:a {:b "c"} "d" "e"] opts)
 
- ;; nested child
+ ;; nested child is compiled
   (compile [:a {:b "c"} [:d]] opts)
 
   (let [opts {:emitter emitter
-              :parsers [[:a (fn [_ _] `(A))]]}]
+              :parsers [[:a (fn [_ _ _] `(A))]]}]
     (compile [:a] opts)))

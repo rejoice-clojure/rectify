@@ -10,7 +10,7 @@
 
 ;; == Parsers
 
-(s/def :cloap/parsers
+(s/def :rec/parsers
   (s/coll-of
    (s/tuple
     some?
@@ -19,43 +19,40 @@
 
 (comment
   ;;  empty parser
-  (conform [] ::parsers)
+  (conform [] :rec/parsers)
 
  	;; map parser
-  (conform [[keyword? {}]] ::parsers)
+  (conform [[keyword? {}]] :rec/parsers)
 
  	;; fn parser
-  (conform [[keyword? (fn [])]] ::parsers)
+  (conform [[keyword? (fn [])]] :rec/parsers)
 
  	;; invalids
-  (conform [nil] ::parsers)
-  (conform [{}] ::parsers)
-  (conform [[]] ::parsers))
+  (conform [nil] :rec/parsers)
+  (conform [{}] :rec/parsers)
+  (conform [[]] :rec/parsers))
 
 
 ;; == Hiccup
 
-(s/def :cloap/hiccup
+(s/def :rec/hiccup
   (s/cat
-   :tag   #(or (keyword? %) (symbol? %))
-   :props (s/? (s/map-of keyword? any?))
-   :slot-prop  (s/alt
-                :child (s/? some?)
-                :children (s/+ some?))
-   :catch (s/* nil?)))
+   :tag    #(or (keyword? %) (symbol? %))
+   :props  (s/? (s/map-of keyword? any?))
+  ;;  accumulate rest of children arguments as slots
+   :slots  (s/* some?)
+   :catch  (s/* nil?)))
 
 (comment
-  (conform '[widget]  ::hiccup)
-  (conform '[widget nil] ::hiccup)
-  (conform '[widget {} nil] ::hiccup)
-  (conform '[widget {} [:text]] ::hiccup)
-  (conform '[widget {} [:text] [:text]] ::hiccup))
-
-
+  (conform '[widget]  :rec/hiccup)
+  (conform '[widget nil] :rec/hiccup)
+  (conform '[widget {} nil] :rec/hiccup)
+  (conform '[widget {} [:text]] :rec/hiccup)
+  (conform '[widget {} [:text] [:text]] :rec/hiccup))
 
 ;;  == Component
 
-(s/def :cloap/component
+(s/def :rec/component
   (s/cat
    :name   symbol?
    :docstr (s/? string?)
@@ -69,26 +66,26 @@
 
 (comment
   ;;  name + param
-  (conform '(name []) ::component)
+  (conform '(name []) :rec/component)
 
   ;;  name + doc + param
-  (conform '(name "doc" []) ::component)
+  (conform '(name "doc" []) :rec/component)
 
   ;;  name + param + opts
-  (conform '(name [] {}) ::component)
+  (conform '(name [] {}) :rec/component)
 
   ;; name + param + hiccup child
-  (conform '(name [] [:a b]) ::component)
+  (conform '(name [] [:a b]) :rec/component)
 
   ;;  name + param + opts + hiccup child 
-  (conform '(name [] {} [:a b]) ::component)
+  (conform '(name [] {} [:a b]) :rec/component)
 
   ;; name + param + opts + hiccup children
-  (conform '(name [] {} [:a b] [:a b]) ::component)
+  (conform '(name [] {} [:a b] [:a b]) :rec/component)
 
 
   ;;  name + param + opts + evals + child
-  (conform '(name [] {} (expr) [:a b]) ::component)
+  (conform '(name [] {} (expr) [:a b]) :rec/component)
 
   ;; nil body
-  (conform '(name [] nil) ::component))
+  (conform '(name [] nil) :rec/component))
