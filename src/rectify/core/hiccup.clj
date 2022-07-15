@@ -94,6 +94,10 @@
   [tag props (or slots [])])
 
 (defn compile
+  "Compile hiccup body. 
+   Body can be hiccup data or list expr to parse; anything else is returned directly.
+   Accepts optional `emitter` and `parsers` as options. 
+   Hiccup must be parsed into a callable expr either by parsers or emitter."
   [body {:keys [emitter parsers]
          :or {parsers []}
          :as opts}]
@@ -102,18 +106,18 @@
     (vector? body)
     (let [parsers (spec/conform parsers :rec/parsers)
           normalized-args (normalize (spec/conform body :rec/hiccup))
-          compile-rest #(compile % opts)
-          args (run-args-parsers normalized-args parsers)]
+          parsed (run-args-parsers normalized-args parsers)]
       (cond
-        ;; => Emit args.
-        ;; Any vector args returned from parser will be normalized, so we apply them to emitter diretly.
-        (vector? args) (let [[tag props slots] args] (emitter tag props (mapv compile-rest slots)))
+        ;; => Emit args
+        (vector? parsed) 
+        (if emitter
+         (let [[tag props slots] parsed] (emitter tag props (mapv #(compile % opts) slots)))
+          (throw (ex-info "Hiccup must be parsed to callable expr if emitter is not passed." {:expr parsed})))
 
-        ;; => Call expr. 
-        ;; Parsers can directly return self-callable exprs.
-        (sequential? args) args
+        ;; => Call parsed expr
+        (sequential? parsed) parsed
 
-        :else (throw (ex-info "Invalid component argument." {:args args}))))
+        :else (throw (ex-info "Invalid hiccup parsed." {:args parsed}))))
 
      ;; => S-Expression
     ;; (list? body)
