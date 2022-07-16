@@ -117,11 +117,12 @@
 (defn compile
   "Compile hiccup body. 
    Body can be hiccup data or list expr to parse; anything else is returned directly.
-   Accepts optional `emitter` and `parsers` as options. 
-   Hiccup must be parsed into a callable expr either by parsers or emitter."
-  [body {:keys [emitter parsers expr-parsers]
+   Hiccup must be parsed into a callable expr either by `parsers` or optional `emitter`.
+   If `strict` is true then only expr in parser list are accepted."
+  [body {:keys [strict emitter parsers expr-parsers]
          :or {parsers []
-              expr-parsers []}
+              expr-parsers []
+              strict true}
          :as opts}]
   (cond
      ;; => Hiccup
@@ -141,9 +142,11 @@
     (list? body)
     (let [expr-parsers (spec/conform expr-parsers :rec/parsers)
           allowed-tags (reduce #(conj %1 (first %2)) #{} expr-parsers)]
-      (if (contains? allowed-tags (first body))
+      (cond
+        (contains? allowed-tags (first body))
         (run-expr-parser body expr-parsers #(compile % opts))
-        (throw (ex-info "Expr is not registered in parser list." {:expr body}))))
+        (not strict) body 
+        :else (throw (ex-info "Expr is not registered in parser list." {:expr body}))))
 
     :else body))
 
