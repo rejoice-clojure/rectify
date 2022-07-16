@@ -48,20 +48,18 @@
    For props key, a map of keyvals to parse is also allowed."
   [args [_clause {:as parser
                   :or {tag identity props identity}}]]
-  (letfn [(fn-or-x [f x] (if (fn? f) (f x) (or f x)))
+  (letfn [(fn-or-x [fx x] (if (fn? fx) (fx x) (or fx x)))
           (run-props-parsers
-            [props prop-parsers]
+            [prop-parsers props]
             (seq-parse props {:parsers (into [] prop-parsers)
                               :check-clause check-props-clause
                               :apply-parser apply-props-parser}))
           (apply-parser-map
             [[tag props slots] parser]
-            [(fn-or-x (:tag parser) tag)
-             (when props
-               (if (map? props)
-                 (run-props-parsers props (:props parser))
-                 (fn-or-x (:props parser) props)))
-             (fn-or-x (:slots parser) slots)])]
+           (let [par-tag (:tag parser) par-props (:props parser) par-slots (:slots parser)]
+            [(fn-or-x par-tag tag)
+             (when props ((if (map? par-props) run-props-parsers fn-or-x) par-props props))
+             (fn-or-x par-slots slots)]))]
     (if (fn? parser)
       (apply parser args)
       (apply-parser-map args parser))))
