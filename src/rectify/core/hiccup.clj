@@ -14,13 +14,18 @@
 
    Parsers are {clause parser} pairs. 
    A clause is a predicate fn or keyword to that declares the match.
-   A parser is a fn (fn [...args]) or map applied according to `apply-parser-map`."
+   A parser is a fn (fn [...args]) or map applied according to `apply-parser-map`.
+   
+   Options:
+   - check-clause (fn [clause x] bool)
+   - apply-parser (fn [x parsers])
+   - terminate-early? (fn [] bool)"
   [nargs {:keys [parsers
-                   check-clause
-                   apply-parser
-                   terminate-early?]
-            :or {parsers []
-                 terminate-early? (constantly false)}}]
+                 check-clause
+                 apply-parser
+                 terminate-early?]
+          :or {parsers []
+               terminate-early? (constantly false)}}]
   (reduce (fn [acc [clause parser]]
             (if (check-clause clause acc)
               (let [parsed-args (apply-parser acc [clause parser])]
@@ -56,16 +61,16 @@
                               :apply-parser apply-props-parser}))
           (apply-parser-map
             [[tag props slots] parser]
-           (let [par-tag (:tag parser) par-props (:props parser) par-slots (:slots parser)]
-            [(fn-or-x par-tag tag)
-             (when props ((if (map? par-props) run-props-parsers fn-or-x) par-props props))
-             (fn-or-x par-slots slots)]))]
+            (let [par-tag (:tag parser) par-props (:props parser) par-slots (:slots parser)]
+              [(fn-or-x par-tag tag)
+               (when props ((if (map? par-props) run-props-parsers fn-or-x) par-props props))
+               (fn-or-x par-slots slots)]))]
     (if (fn? parser)
       (apply parser args)
       (apply-parser-map args parser))))
 
 
-(defn run-args-parsers [args parsers]
+(defn run-hiccup-parser [args parsers]
   (seq-parse args {:parsers parsers
                    :check-clause check-args-clause
                    :apply-parser  apply-args-parser
@@ -73,14 +78,32 @@
 
 (comment
   ;; tag parsing
-  (run-args-parsers
+  (run-hiccup-parser
    [:a]
    [[keyword? {:tag #(-> % name str)}]])
 
   ;; props parsing
-  (run-args-parsers
+  (run-hiccup-parser
    [:a {:b "c"}]
    [[keyword? {:props {:b keyword}}]]))
+
+(defn run-expr-parser [expr parsers compile-fn]
+  (seq-parse
+   expr
+   {:parsers parsers
+
+    :check-clause (fn [tag expr] (= tag (first expr)))
+
+    :apply-parser (fn [[_ & args] [_ f]]
+                    (f args compile-fn))
+
+    :terminate-early? (constantly false)}))
+
+(comment
+  (run-expr-parser
+   '(for [x items] x)
+   [['for (fn [args f] `(for ~@(butlast args) ~(f (last args))))]]
+   (fn [x] `(emit ~x))))
 
 
 ;; == Hiccup Compiler
@@ -96,36 +119,37 @@
    Body can be hiccup data or list expr to parse; anything else is returned directly.
    Accepts optional `emitter` and `parsers` as options. 
    Hiccup must be parsed into a callable expr either by parsers or emitter."
-  [body {:keys [emitter parsers]
-         :or {parsers []}
+  [body {:keys [emitter parsers expr-parsers]
+         :or {parsers []
+              expr-parsers []}
          :as opts}]
   (cond
      ;; => Hiccup
     (vector? body)
     (let [parsers (spec/conform parsers :rec/parsers)
-          normalized-args (normalize (spec/conform body :rec/hiccup))
-          parsed (run-args-parsers normalized-args parsers)]
+          nargs (normalize (spec/conform body :rec/hiccup))
+          parsed (run-hiccup-parser nargs parsers)]
       (cond
-        ;; => Emit args
-        (vector? parsed) 
+        (vector? parsed)
         (if emitter
-         (let [[tag props slots] parsed] (emitter tag props (mapv #(compile % opts) slots)))
+          (let [[tag props slots] parsed] (emitter tag props (mapv #(compile % opts) slots)))
           (throw (ex-info "Hiccup must be parsed to callable expr if emitter is not passed." {:expr parsed})))
-
-        ;; => Call parsed expr
         (sequential? parsed) parsed
-
         :else (throw (ex-info "Invalid hiccup parsed." {:args parsed}))))
 
      ;; => S-Expression
-    ;; (list? body)
-    ;; (sexp/transform-children body #(compile % opts))
+    (list? body)
+    (let [expr-parsers (spec/conform expr-parsers :rec/parsers)
+          allowed-tags (reduce #(conj %1 (first %2)) #{} expr-parsers)]
+      (if (contains? allowed-tags (first body))
+        (run-expr-parser body expr-parsers #(compile % opts))
+        (throw (ex-info "Expr is not registered in parser list." {:expr body}))))
 
     :else body))
 
 (comment
   ;; Testing compile options below 
-  ;; for testing how Hiccup arguments are conformed, see spec.
+  ;; for testing how hiccup or  parser arguments are conformed, see spec.
 
   (defn emitter [tag props slots] `(emit ~tag ~props ~@slots))
   (def opts {:emitter emitter
@@ -143,6 +167,11 @@
  ;; nested child is compiled
   (compile [:a {:b "c"} [:d]] opts)
 
-  (let [opts {:emitter emitter
-              :parsers [[:a (fn [_ _ _] `(A))]]}]
-    (compile [:a] opts)))
+  ;; if parser returns expr it is returned directly
+  (let [opts {:parsers [[:a (fn [_ _ _] `(A))]
+                        [:a (fn [_ _ _] :not-here)]]}]
+    (compile [:a] opts))
+
+  ;; handles expr
+  (let [opts {:expr-parsers [['a (fn [args _] `(A ~@args))]]}]
+    (compile '(a :b) opts)))
