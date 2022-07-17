@@ -1,3 +1,5 @@
 # Rectify
 
-Hiccup compiler for ClojureDart to rectify UI development.
+Hiccup compiler to rectify UI development.
+
+Work-in-progress. See `rectify.core/hiccup` for usage.

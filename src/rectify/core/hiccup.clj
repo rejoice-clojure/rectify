@@ -119,15 +119,15 @@
    Body can be hiccup data or list expr to parse; anything else is returned directly.
    Hiccup must be parsed into a callable expr either by `parsers` or optional `emitter`.
    If `strict` is true then only expr in parser list are accepted."
-  [body {:keys [strict emitter parsers expr-parsers]
-         :or {parsers []
-              expr-parsers []
-              strict true}
+  [body {:keys [strict emitter args-parsers sexpr-parsers]
+         :or {strict true
+              args-parsers []
+              sexpr-parsers []}
          :as opts}]
   (cond
      ;; => Hiccup
     (vector? body)
-    (let [parsers (spec/conform parsers :rec/parsers)
+    (let [parsers (spec/conform args-parsers :rec/parsers)
           nargs (normalize (spec/conform body :rec/hiccup))
           parsed (run-hiccup-parser nargs parsers)]
       (cond
@@ -140,7 +140,7 @@
 
      ;; => S-Expression
     (list? body)
-    (let [expr-parsers (spec/conform expr-parsers :rec/parsers)
+    (let [expr-parsers (spec/conform sexpr-parsers :rec/parsers)
           allowed-tags (reduce #(conj %1 (first %2)) #{} expr-parsers)]
       (cond
         (contains? allowed-tags (first body))
@@ -156,7 +156,7 @@
 
   (defn emitter [tag props slots] `(emit ~tag ~props ~@slots))
   (def opts {:emitter emitter
-             :parsers [[any? {:tag #(-> % name symbol)}]]})
+             :args-parsers [[any? {:tag #(-> % name symbol)}]]})
 
   ;; tag + child
   (compile [:a "b"] opts)
@@ -171,7 +171,7 @@
   (compile [:a {:b "c"} [:d]] opts)
 
   ;; if parser returns expr it is returned directly
-  (let [opts {:parsers [[:a (fn [_ _ _] `(A))]
+  (let [opts {:args-parsers [[:a (fn [_ _ _] `(A))]
                         [:a (fn [_ _ _] :not-here)]]}]
     (compile [:a] opts))
 
